@@ -56,10 +56,10 @@ const AddPinForm: React.FC<AddPinFormProps> = ({ addPin, user }) => {
         lat: parseFloat(lat),
         lng: parseFloat(lng),
         category,
-        hikeLength: category === "hiking" ? hikeLength : undefined,
+        hikeLength: category === "hiking" ? hikeLength : null,
         reservationRequired:
-          category === "hiking" ? reservationRequired : undefined,
-        mealType: category === "food" ? mealType : undefined,
+          category === "hiking" ? reservationRequired : null,
+        mealType: category === "food" ? mealType : null,
         notes,
       });
       clearForm();

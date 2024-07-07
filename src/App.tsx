@@ -9,11 +9,14 @@ import { FaUserCircle, FaMapMarkedAlt } from "react-icons/fa";
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { app, db } from "./firebase";
 import { handleGoogleSignIn } from "./util/handleGoogleSignIn";
+import { doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, query, where, arrayUnion } from "firebase/firestore";
+import { exampleData } from "./util/exampleData";
 
 interface MapData {
   id: string;
   name: string;
   pins: Pin[];
+  userId: string;
 }
 
 const hashStringToNumber = (str: string): number => {
@@ -32,110 +35,158 @@ const generateLightColor = (hash: number): string => {
 };
 
 const App: React.FC = () => {
-  const initialMapData: MapData[] = [
-    {
-      id: "1",
-      name: "Example Map",
-      pins: [
-        {
-          id: "1",
-          name: "Central Park",
-          lat: 40.785091,
-          lng: -73.968285,
-          notes: "Iconic park in NYC",
-          category: "sightseeing",
-        },
-        {
-          id: "2",
-          name: "Times Square",
-          lat: 40.758,
-          lng: -73.9855,
-          notes: "Famous intersection in NYC",
-          category: "sightseeing",
-        },
-        {
-          id: "3",
-          name: "Empire State Building",
-          lat: 40.748817,
-          lng: -73.985428,
-          notes: "Iconic skyscraper",
-          category: "sightseeing",
-        },
-        {
-          id: "4",
-          name: "Statue of Liberty",
-          lat: 40.6892,
-          lng: -74.0445,
-          notes: "Symbol of freedom",
-          category: "sightseeing",
-        },
-        {
-          id: "5",
-          name: "Brooklyn Bridge",
-          lat: 40.7061,
-          lng: -73.9969,
-          notes: "Historic bridge",
-          category: "sightseeing",
-        },
-        {
-          id: "6",
-          name: "Broadway",
-          lat: 40.759,
-          lng: -73.9845,
-          notes: "Famous theater district",
-          category: "sightseeing",
-        },
-      ],
-    },
-  ];
-
-  const [maps, setMaps] = useState<MapData[]>(initialMapData);
-  const [selectedMapId, setSelectedMapId] = useState<string | null>("1");
+  const [maps, setMaps] = useState<MapData[]>([]);
+  const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null); // Replace 'any' with your user type if defined
 
   useEffect(() => {
     const auth = getAuth(app);
-    onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      loadMaps(user ? user.uid : null);
     });
+  
+    return () => unsubscribe();
   }, []);
+  
 
-  const addMap = (name: string) => {
+  const loadMaps = async (userId: string | null) => {
+    try {
+      if (!userId) {
+        // User is not logged in, load example map
+        const exampleMap: MapData = {
+          id: "exampleMap",
+          name: "Example Map",
+          pins: exampleData,
+          userId: "",
+        };
+        setMaps([exampleMap]);
+        setSelectedMapId("exampleMap");
+        return;
+      }
+  
+      const q = query(collection(db, "maps"), where("userId", "==", userId));
+      const querySnapshot = await getDocs(q);
+  
+      const loadedMaps: MapData[] = [];
+      querySnapshot.forEach((doc) => {
+        loadedMaps.push({ id: doc.id, ...doc.data() } as MapData);
+      });
+  
+      // Sort loaded maps by some criteria (e.g., creation time)
+      loadedMaps.sort((a, b) => {
+        // Assuming 'createdAt' or some timestamp field exists
+        // Replace with your actual timestamp field
+        return Number(b.id) - Number(a.id); // Adjust as per your data structure
+      });
+  
+      if (loadedMaps.length === 0) {
+        // If no maps exist, create Example Map
+        const exampleMap: MapData = {
+          id: `${new Date("2024-01-01")}`,
+          name: "Example Map",
+          pins: exampleData,
+          userId: userId,
+        };
+        const exampleMapRef = doc(db, "maps", exampleMap.id);
+        await setDoc(exampleMapRef, exampleMap);
+        loadedMaps.push(exampleMap);
+      }
+  
+      setMaps(loadedMaps);
+      if (loadedMaps.length > 0 && !selectedMapId) {
+        setSelectedMapId(loadedMaps[0].id);
+      }
+    } catch (error) {
+      console.error("Error loading maps:", error);
+    }
+  };
+  
+  
+
+  const addMap = async (name: string) => {
+    if (!user) {
+      alert("You must be logged in to add a new map.");
+      return;
+    }
+  
     const newMap: MapData = {
       id: `${Date.now()}`,
       name,
       pins: [],
+      userId: user.uid,
     };
-    setMaps([...maps, newMap]);
-    setSelectedMapId(newMap.id);
+  
+    try {
+      console.log("Adding map:", newMap);
+      const mapRef = doc(db, "maps", newMap.id);
+      await setDoc(mapRef, newMap);
+      setMaps([newMap, ...maps]); // Prepend new map to the beginning
+      setSelectedMapId(newMap.id);
+      console.log("Map added successfully:", newMap);
+    } catch (error) {
+      console.error("Error adding map:", error);
+    }
   };
+  
 
-  const addPin = (pin: Pin) => {
-    setMaps(
-      maps.map((map) =>
+  const addPin = async (pin: Pin) => {
+    try {
+      if (!selectedMapId) {
+        console.error("No map selected to add pin.");
+        return;
+      }
+
+      const mapRef = doc(db, "maps", selectedMapId);
+      console.log(pin)
+      await updateDoc(mapRef, {
+        pins: arrayUnion(pin),
+      });
+
+      const updatedMaps = maps.map((map) =>
         map.id === selectedMapId ? { ...map, pins: [...map.pins, pin] } : map
-      )
-    );
-  };
-
-  const deletePin = (pinId: string) => {
-    if (user) {
-      setMaps(
-        maps.map((map) =>
-          map.id === selectedMapId
-            ? { ...map, pins: map.pins.filter((pin) => pin.id !== pinId) }
-            : map
-        )
       );
-    } else {
-      handleGoogleSignIn();
+      setMaps(updatedMaps);
+    } catch (error) {
+      console.error("Error adding pin:", error);
     }
   };
 
-  const deleteMap = (mapId: string) => {
-    const updatedMaps = maps.filter((map) => map.id !== mapId);
-    setMaps(updatedMaps);
-    setSelectedMapId(null);
+  const deletePin = async (pinId: string) => {
+    try {
+      if (user && selectedMapId) {
+        const updatedMaps = maps.map((map) =>
+          map.id === selectedMapId
+            ? { ...map, pins: map.pins.filter((pin) => pin.id !== pinId) }
+            : map
+        );
+
+        setMaps(updatedMaps);
+
+        const mapRef = doc(db, "maps", selectedMapId);
+        await updateDoc(mapRef, {
+          pins: updatedMaps.find((map) => map.id === selectedMapId)?.pins || [],
+        });
+      } else {
+        handleGoogleSignIn();
+      }
+    } catch (error) {
+      console.error("Error deleting pin:", error);
+    }
+  };
+
+  const deleteMap = async (mapId: string) => {
+    try {
+      const updatedMaps = maps.filter((map) => map.id !== mapId);
+
+      setMaps(updatedMaps);
+      setSelectedMapId(null);
+
+      const mapRef = doc(db, "maps", mapId);
+      await deleteDoc(mapRef);
+    } catch (error) {
+      console.error("Error deleting map:", error);
+    }
   };
 
   const selectMap = (id: string) => {
@@ -146,6 +197,8 @@ const App: React.FC = () => {
     try {
       await signOut(getAuth(app));
       setUser(null);
+      setMaps([]); // Clear maps when the user signs out
+      setSelectedMapId(null);
     } catch (error) {
       console.error("Error signing out:", error);
     }

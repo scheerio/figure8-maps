@@ -4,9 +4,9 @@ export interface Pin {
   lat: number;
   lng: number;
   category: string;
-  hikeLength?: string;
-  reservationRequired?: string;
-  mealType?: string;
+  hikeLength?: string | null;
+  reservationRequired?: string | null;
+  mealType?: string | null;
   notes?: string;
 }
 
