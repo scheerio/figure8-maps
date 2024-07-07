@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import useGoogleMaps from "../hooks/useGoogleMaps";
 import { Pin } from "../types/types";
+import { handleGoogleSignIn } from "../util/handleGoogleSignIn";
 
 interface AddPinFormProps {
   addPin: (pin: Pin) => void;
+  user: any;
 }
 
-const AddPinForm: React.FC<AddPinFormProps> = ({ addPin }) => {
+const AddPinForm: React.FC<AddPinFormProps> = ({ addPin, user }) => {
   const [name, setName] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
@@ -46,19 +48,24 @@ const AddPinForm: React.FC<AddPinFormProps> = ({ addPin }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const id = generateUniqueId(); // Function to generate unique ID
-    addPin({
-      id,
-      name,
-      lat: parseFloat(lat),
-      lng: parseFloat(lng),
-      category,
-      hikeLength: category === "hiking" ? hikeLength : undefined,
-      reservationRequired: category === "hiking" ? reservationRequired : undefined,
-      mealType: category === "food" ? mealType : undefined,
-      notes,
-    });
-    clearForm();
+    if (user) {
+      const id = generateUniqueId(); // Function to generate unique ID
+      addPin({
+        id,
+        name,
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        category,
+        hikeLength: category === "hiking" ? hikeLength : undefined,
+        reservationRequired:
+          category === "hiking" ? reservationRequired : undefined,
+        mealType: category === "food" ? mealType : undefined,
+        notes,
+      });
+      clearForm();
+    } else {
+      handleGoogleSignIn();
+    }
   };
 
   const clearForm = () => {
