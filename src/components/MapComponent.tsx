@@ -1,5 +1,5 @@
-import React from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import React, { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { LatLngExpression, divIcon } from "leaflet";
 import {
   FaHiking,
@@ -50,6 +50,20 @@ interface MapComponentProps {
 
 const center: LatLngExpression = [40.785091, -73.968285];
 
+const MapCenter: React.FC<{ pins: Pin[] }> = ({ pins }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (pins.length > 0) {
+      const lastPin = pins[pins.length - 1];
+      const { lat, lng } = lastPin;
+      map.flyTo([lat, lng] as LatLngExpression, 12);
+    }
+  }, [pins, map]);
+
+  return null;
+};
+
 const MapComponent: React.FC<MapComponentProps> = ({ pins, deletePin }) => {
   return (
     <MapContainer
@@ -61,6 +75,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ pins, deletePin }) => {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
+      <MapCenter pins={pins} />
       {pins.map((pin, index) => (
         <Marker
           key={index}
