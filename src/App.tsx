@@ -9,7 +9,18 @@ import { FaUserCircle, FaMapMarkedAlt } from "react-icons/fa";
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { app, db } from "./firebase";
 import { handleGoogleSignIn } from "./util/handleGoogleSignIn";
-import { doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, query, where, arrayUnion } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+  getDocs,
+  collection,
+  query,
+  where,
+  arrayUnion,
+} from "firebase/firestore";
 import { exampleData } from "./util/exampleData";
 
 interface MapData {
@@ -45,10 +56,9 @@ const App: React.FC = () => {
       setUser(user);
       loadMaps(user ? user.uid : null);
     });
-  
+
     return () => unsubscribe();
   }, []);
-  
 
   const loadMaps = async (userId: string | null) => {
     try {
@@ -64,22 +74,22 @@ const App: React.FC = () => {
         setSelectedMapId("exampleMap");
         return;
       }
-  
+
       const q = query(collection(db, "maps"), where("userId", "==", userId));
       const querySnapshot = await getDocs(q);
-  
+
       const loadedMaps: MapData[] = [];
       querySnapshot.forEach((doc) => {
         loadedMaps.push({ id: doc.id, ...doc.data() } as MapData);
       });
-  
+
       // Sort loaded maps by some criteria (e.g., creation time)
       loadedMaps.sort((a, b) => {
         // Assuming 'createdAt' or some timestamp field exists
         // Replace with your actual timestamp field
         return Number(b.id) - Number(a.id); // Adjust as per your data structure
       });
-  
+
       if (loadedMaps.length === 0) {
         // If no maps exist, create Example Map
         const exampleMap: MapData = {
@@ -92,7 +102,7 @@ const App: React.FC = () => {
         await setDoc(exampleMapRef, exampleMap);
         loadedMaps.push(exampleMap);
       }
-  
+
       setMaps(loadedMaps);
       if (loadedMaps.length > 0 && !selectedMapId) {
         setSelectedMapId(loadedMaps[0].id);
@@ -101,34 +111,29 @@ const App: React.FC = () => {
       console.error("Error loading maps:", error);
     }
   };
-  
-  
 
   const addMap = async (name: string) => {
     if (!user) {
       alert("You must be logged in to add a new map.");
       return;
     }
-  
+
     const newMap: MapData = {
       id: `${Date.now()}`,
       name,
       pins: [],
       userId: user.uid,
     };
-  
+
     try {
-      console.log("Adding map:", newMap);
       const mapRef = doc(db, "maps", newMap.id);
       await setDoc(mapRef, newMap);
       setMaps([newMap, ...maps]); // Prepend new map to the beginning
       setSelectedMapId(newMap.id);
-      console.log("Map added successfully:", newMap);
     } catch (error) {
       console.error("Error adding map:", error);
     }
   };
-  
 
   const addPin = async (pin: Pin) => {
     try {
@@ -138,7 +143,6 @@ const App: React.FC = () => {
       }
 
       const mapRef = doc(db, "maps", selectedMapId);
-      console.log(pin)
       await updateDoc(mapRef, {
         pins: arrayUnion(pin),
       });
