@@ -19,17 +19,16 @@ const AddPinForm: React.FC<AddPinFormProps> = ({ addPin, user }) => {
   const [notes, setNotes] = useState("");
   const autocompleteInputRef = useRef<HTMLInputElement>(null);
 
-  // Replace 'YOUR_API_KEY' with your actual Google Maps API key
   const apiKey = process.env.REACT_APP_GOOGLE_API_KEY || "";
   const googleLoaded = useGoogleMaps(apiKey);
 
   useEffect(() => {
     if (!googleLoaded || !autocompleteInputRef.current) return;
 
-    const autocomplete = new google.maps.places.Autocomplete(
-      autocompleteInputRef.current,
-      { types: ["geocode"] }
-    );
+    const inputElement = autocompleteInputRef.current;
+    const autocomplete = new google.maps.places.Autocomplete(inputElement, {
+      types: ["geocode"],
+    });
 
     const handlePlaceSelect = () => {
       const place = autocomplete.getPlace();
@@ -43,16 +42,14 @@ const AddPinForm: React.FC<AddPinFormProps> = ({ addPin, user }) => {
     autocomplete.addListener("place_changed", handlePlaceSelect);
 
     return () => {
-      if (autocomplete && autocompleteInputRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteInputRef.current);
-      }
+      google.maps.event.clearInstanceListeners(inputElement);
     };
   }, [googleLoaded]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (user) {
-      const id = generateUniqueId(); // Function to generate unique ID
+      const id = generateUniqueId();
       addPin({
         id,
         name,
