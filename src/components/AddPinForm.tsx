@@ -12,39 +12,42 @@ const AddPinForm: React.FC<AddPinFormProps> = ({ addPin, user }) => {
   const [name, setName] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
-  const [category, setCategory] = useState("other"); // Changed 'type' to 'category'
+  const [category, setCategory] = useState("other");
   const [hikeLength, setHikeLength] = useState("NA");
   const [reservationRequired, setReservationRequired] = useState("NA");
-  const [mealType, setMealType] = useState("NA"); // Default meal type
-  const [notes, setNotes] = useState(""); // State for notes
+  const [mealType, setMealType] = useState("NA");
+  const [notes, setNotes] = useState("");
   const autocompleteInputRef = useRef<HTMLInputElement>(null);
 
   // Replace 'YOUR_API_KEY' with your actual Google Maps API key
-  const apiKey = process.env.REACT_APP_GOOGLE_API_KEY;
-  useGoogleMaps(apiKey);
+  const apiKey = process.env.REACT_APP_GOOGLE_API_KEY || "";
+  const googleLoaded = useGoogleMaps(apiKey);
 
   useEffect(() => {
-    const handlePlaceSelect = () => {
-      if (!autocompleteInputRef.current) return;
+    if (!googleLoaded || !autocompleteInputRef.current) return;
 
-      const autocomplete = new google.maps.places.Autocomplete(
-        autocompleteInputRef.current,
-        { types: ["geocode"] }
-      );
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete.getPlace();
-        if (place.geometry && place.geometry.location) {
-          const location = place.geometry.location;
-          setLat(location.lat().toString());
-          setLng(location.lng().toString());
-        }
-      });
+    const autocomplete = new google.maps.places.Autocomplete(
+      autocompleteInputRef.current,
+      { types: ["geocode"] }
+    );
+
+    const handlePlaceSelect = () => {
+      const place = autocomplete.getPlace();
+      if (place.geometry && place.geometry.location) {
+        const location = place.geometry.location;
+        setLat(location.lat().toString());
+        setLng(location.lng().toString());
+      }
     };
 
-    if (autocompleteInputRef.current) {
-      handlePlaceSelect();
-    }
-  }, []);
+    autocomplete.addListener("place_changed", handlePlaceSelect);
+
+    return () => {
+      if (autocomplete && autocompleteInputRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteInputRef.current);
+      }
+    };
+  }, [googleLoaded]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +78,7 @@ const AddPinForm: React.FC<AddPinFormProps> = ({ addPin, user }) => {
     setHikeLength("NA");
     setReservationRequired("NA");
     setMealType("NA");
-    setNotes(""); // Clear notes field
+    setNotes("");
     if (autocompleteInputRef.current) {
       autocompleteInputRef.current.value = "";
     }
@@ -84,7 +87,6 @@ const AddPinForm: React.FC<AddPinFormProps> = ({ addPin, user }) => {
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedCategory = e.target.value;
     setCategory(selectedCategory);
-    // Reset optional fields when changing category
     if (selectedCategory !== "hiking") {
       setHikeLength("NA");
       setReservationRequired("NA");
@@ -95,7 +97,7 @@ const AddPinForm: React.FC<AddPinFormProps> = ({ addPin, user }) => {
   };
 
   const generateUniqueId = () => {
-    return Math.random().toString(36).substr(2, 9); // Generate random ID
+    return Math.random().toString(36).substr(2, 9);
   };
 
   return (
