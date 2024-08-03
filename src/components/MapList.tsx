@@ -6,9 +6,8 @@ import { handleGoogleSignIn } from "../util/handleGoogleSignIn";
 interface MapListProps {
   maps: MapData[];
   addMap: (name: string) => void;
-  selectMap: (id: string) => void;
+  selectMap: (id: string | null) => void;
   selectedMapId: string | null;
-  setSelectedMapId: (id: string | null) => void;
   deleteMap: (id: string) => void;
   user: any;
 }
@@ -18,7 +17,6 @@ const MapList: React.FC<MapListProps> = ({
   addMap,
   selectMap,
   selectedMapId,
-  setSelectedMapId,
   deleteMap,
   user,
 }) => {
@@ -61,7 +59,7 @@ const MapList: React.FC<MapListProps> = ({
           selectMap(maps[0].id);
         } else {
           // No maps left
-          setSelectedMapId(null);
+          selectMap(null);
         }
       }
     } else {

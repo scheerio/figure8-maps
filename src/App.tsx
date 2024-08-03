@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MapComponent from "./components/MapComponent";
 import AddPinForm from "./components/AddPinForm";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import MapList from "./components/MapList";
 import Login from "./components/Login";
 import Logout from "./components/Logout";
@@ -49,6 +50,7 @@ const App: React.FC = () => {
   const [maps, setMaps] = useState<MapData[]>([]);
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null); // Replace 'any' with your user type if defined
+  const navigate = useNavigate();
 
   useEffect(() => {
     const auth = getAuth(app);
@@ -61,13 +63,13 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_API_KEY}&libraries=places`;
     script.async = true;
     document.body.appendChild(script);
     return () => {
       document.body.removeChild(script);
-    }
+    };
   }, []);
 
   const loadMaps = async (userId: string | null) => {
@@ -203,8 +205,14 @@ const App: React.FC = () => {
     }
   };
 
-  const selectMap = (id: string) => {
+  const selectMap = (id: string | null) => {
+    if (id) {
     setSelectedMapId(id);
+    navigate(`/maps/${id}`);
+    } else {
+      setSelectedMapId(null);
+      navigate('/');
+    }
   };
 
   const handleSignOut = async () => {
@@ -231,42 +239,49 @@ const App: React.FC = () => {
           <div className="text-2xl font-semibold">Figure8 Maps</div>
         </div>
         <div className="flex items-center">
-          {user ? (
-            <div className="flex items-center">
-              <FaUserCircle className="text-2xl mr-2 cursor-pointer" />
-              <Logout signOut={handleSignOut} />
-            </div>
-          ) : (
-            <div className="flex items-center">
-              <FaUserCircle className="text-2xl mr-2 cursor-pointer" />
-              <Login />
-            </div>
-          )}
+          {user ? <Logout signOut={handleSignOut} /> : <Login />}
         </div>
       </header>
-
       <div className="flex flex-1">
-        <div className="w-1/5 p-4" style={{ backgroundColor }}>
-          <MapList
-            maps={maps}
-            addMap={addMap}
-            selectMap={selectMap}
-            selectedMapId={selectedMapId}
-            setSelectedMapId={setSelectedMapId}
-            deleteMap={deleteMap}
-            user={user}
-          />
-        </div>
+          <div className="w-1/5 p-4" style={{ backgroundColor }}>
+            <MapList
+              maps={maps}
+              addMap={addMap}
+              selectMap={selectMap}
+              selectedMapId={selectedMapId}
+              deleteMap={deleteMap}
+              user={user}
+            />
+          </div>
         <div className="w-4/5 flex">
-          {selectedMap && (
-            <>
-              <div className="w-2/3">
-                <MapComponent pins={selectedMap.pins} deletePin={deletePin} />
-              </div>
-              <div className="w-1/3 p-4" style={{ backgroundColor }}>
-                <AddPinForm addPin={addPin} user={user} />
-              </div>
-            </>
+          {selectedMapId && (
+            <Routes>
+              <Route
+                path="/maps/:mapId"
+                element={
+                  <>
+                    <MapComponent
+                      pins={
+                        maps.find((map) => map.id === selectedMapId)?.pins || []
+                      }
+                      deletePin={deletePin}
+                    />
+                    <AddPinForm addPin={addPin} user={user} />
+                  </>
+                }
+              />
+              <Route
+                path="/maps/:mapId/view"
+                element={
+                  <MapComponent
+                    pins={
+                      maps.find((map) => map.id === selectedMapId)?.pins || []
+                    }
+                    deletePin={() => {}}
+                  />
+                }
+              />
+            </Routes>
           )}
         </div>
       </div>
