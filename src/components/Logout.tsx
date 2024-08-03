@@ -1,7 +1,7 @@
 // Logout.tsx
 
 import React from "react";
-import { signOut } from "firebase/auth"; // Import signOut from firebase/auth
+// import { signOut } from "firebase/auth"; // Import signOut from firebase/auth
 
 interface LogoutProps {
   signOut: () => Promise<void>;

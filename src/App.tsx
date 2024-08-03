@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import MapComponent from "./components/MapComponent";
 import AddPinForm from "./components/AddPinForm";
 import MapList from "./components/MapList";
@@ -14,7 +14,6 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
-  getDoc,
   getDocs,
   collection,
   query,
@@ -50,27 +49,7 @@ const App: React.FC = () => {
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null); // Replace 'any' with your user type if defined
 
-  useEffect(() => {
-    const auth = getAuth(app);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      loadMaps(user ? user.uid : null);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_API_KEY}&libraries=places`;
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    }
-  }, []);
-
-  const loadMaps = async (userId: string | null) => {
+  const loadMaps = useCallback(async (userId: string | null) => {
     try {
       if (!userId) {
         // User is not logged in, load example map
@@ -120,7 +99,27 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Error loading maps:", error);
     }
-  };
+  }, [selectedMapId]);
+
+  useEffect(() => {
+    const auth = getAuth(app);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      loadMaps(user ? user.uid : null);
+    });
+
+    return () => unsubscribe();
+  }, [loadMaps]);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_API_KEY}&libraries=places`;
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    }
+  }, []);
 
   const addMap = async (name: string) => {
     if (!user) {
