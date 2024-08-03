@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MapComponent from "./components/MapComponent";
 import AddPinForm from "./components/AddPinForm";
 import MapList from "./components/MapList";
@@ -14,7 +15,6 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
-  getDoc,
   getDocs,
   collection,
   query,
@@ -49,6 +49,8 @@ const App: React.FC = () => {
   const [maps, setMaps] = useState<MapData[]>([]);
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null); // Replace 'any' with your user type if defined
+  const { mapId } = useParams<{ mapId: string }>(); // Get mapId from URL
+  const navigate = useNavigate();
 
   useEffect(() => {
     const auth = getAuth(app);
@@ -61,13 +63,13 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_API_KEY}&libraries=places`;
     script.async = true;
     document.body.appendChild(script);
     return () => {
       document.body.removeChild(script);
-    }
+    };
   }, []);
 
   const loadMaps = async (userId: string | null) => {
@@ -82,6 +84,7 @@ const App: React.FC = () => {
         };
         setMaps([exampleMap]);
         setSelectedMapId("exampleMap");
+        navigate("/maps/exampleMap");
         return;
       }
 
@@ -114,8 +117,16 @@ const App: React.FC = () => {
       }
 
       setMaps(loadedMaps);
-      if (loadedMaps.length > 0 && !selectedMapId) {
+
+      if (mapId) {
+        const validMapId = loadedMaps.some(map => map.id === mapId) ? mapId : loadedMaps[0].id;
+        setSelectedMapId(validMapId);
+        if (validMapId !== mapId) {
+          navigate(`/maps/${validMapId}`);
+        }
+      } else if (loadedMaps.length > 0) {
         setSelectedMapId(loadedMaps[0].id);
+        navigate(`/maps/${loadedMaps[0].id}`);
       }
     } catch (error) {
       console.error("Error loading maps:", error);
@@ -140,6 +151,7 @@ const App: React.FC = () => {
       await setDoc(mapRef, newMap);
       setMaps([newMap, ...maps]); // Prepend new map to the beginning
       setSelectedMapId(newMap.id);
+      navigate(`/maps/${newMap.id}`);
     } catch (error) {
       console.error("Error adding map:", error);
     }
@@ -194,7 +206,13 @@ const App: React.FC = () => {
       const updatedMaps = maps.filter((map) => map.id !== mapId);
 
       setMaps(updatedMaps);
-      setSelectedMapId(null);
+      if (updatedMaps.length > 0) {
+        setSelectedMapId(updatedMaps[0].id);
+        navigate(`/maps/${updatedMaps[0].id}`);
+      } else {
+        setSelectedMapId(null);
+        navigate("/");
+      }
 
       const mapRef = doc(db, "maps", mapId);
       await deleteDoc(mapRef);
@@ -205,6 +223,7 @@ const App: React.FC = () => {
 
   const selectMap = (id: string) => {
     setSelectedMapId(id);
+    navigate(`/maps/${id}`);
   };
 
   const handleSignOut = async () => {
@@ -213,6 +232,7 @@ const App: React.FC = () => {
       setUser(null);
       setMaps([]); // Clear maps when the user signs out
       setSelectedMapId(null);
+      navigate("/");
     } catch (error) {
       console.error("Error signing out:", error);
     }
