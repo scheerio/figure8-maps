@@ -81,6 +81,16 @@ const MapComponent: React.FC<MapComponentProps> = ({ pins, deletePin }) => {
           key={index}
           position={[pin.lat, pin.lng] as LatLngExpression}
           icon={getPinIcon(pin.category)}
+          eventHandlers={{
+            mouseover: (e) => {
+              const marker = e.target;
+              marker.openPopup();
+            },
+            mouseout: (e) => {
+              const marker = e.target;
+              marker.closePopup();
+            },
+          }}
         >
           <Popup>
             <strong>{pin.name}</strong>
