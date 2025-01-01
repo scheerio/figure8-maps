@@ -87,8 +87,14 @@ const MapComponent: React.FC<MapComponentProps> = ({ pins, deletePin }) => {
               marker.openPopup();
             },
             mouseout: (e) => {
-              const marker = e.target;
-              marker.closePopup();
+              const relatedTarget = (e.originalEvent as MouseEvent).relatedTarget; // Access the related target from the original DOM event
+              if (
+                relatedTarget &&
+                !e.target.getPopup().getElement().contains(relatedTarget as Node)
+              ) {
+                const marker = e.target;
+                marker.closePopup();
+              }
             },
           }}
         >
